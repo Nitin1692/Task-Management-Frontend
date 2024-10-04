@@ -4,7 +4,7 @@ import axios from "axios";
 const API_URL = "http://localhost:5000/api/tasks";
 
 const TaskDashboard = ({ token, setToken }) => {
-  const [tasks, setTasks] = useState([]); // Ensure initial state is an empty array
+  const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("Pending");
@@ -13,51 +13,48 @@ const TaskDashboard = ({ token, setToken }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log(response.data); // Check the format of the response
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log(response.data);
 
-        // Update the tasks state based on the response structure
-        if (Array.isArray(response.data.result)) {
-          setTasks(response.data.result); // Access 'result' instead of 'tasks'
-        } else {
-          setError("Unexpected response format.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch tasks", error);
-        setError("Failed to fetch tasks. Please try again later.");
-      } finally {
-        setLoading(false);
+      if (Array.isArray(response.data.result)) {
+        setTasks(response.data.result);
+      } else {
+        setError("Unexpected response format.");
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch tasks", error);
+      setError("Failed to fetch tasks. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-
-
+  useEffect(() => {
     if (token) {
       fetchTasks();
     }
   }, [token, setToken]);
-
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
     setError("");
     try {
       setLoading(true);
-      const response = await axios.post(
+      await axios.post(
         API_URL,
         { title, description, status, duedate },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setTasks((prev) => [...prev, response.data.task]); // Ensure `prev` is an array
       resetForm();
+      // Fetch tasks again after creating a new task
+      await fetchTasks(); 
     } catch (error) {
       console.error("Failed to create task", error);
       setError("Failed to create task. Please try again.");
@@ -70,7 +67,7 @@ const TaskDashboard = ({ token, setToken }) => {
     setTitle(task.title);
     setDescription(task.description);
     setStatus(task.status);
-    setDueDate(task.duedate); // Make sure to access duedate correctly
+    setDueDate(task.duedate);
     setEditingTaskId(task._id);
   };
 
@@ -86,14 +83,9 @@ const TaskDashboard = ({ token, setToken }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setTasks((prev) =>
-        prev.map((task) =>
-          task._id === editingTaskId
-            ? { ...task, title, description, status, duedate }
-            : task
-        )
-      );
       resetForm();
+      // Fetch tasks again after updating the task
+      await fetchTasks(); 
     } catch (error) {
       console.error("Failed to update task", error);
       setError("Failed to update task. Please try again.");
@@ -109,7 +101,8 @@ const TaskDashboard = ({ token, setToken }) => {
       await axios.delete(`${API_URL}/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks((prev) => prev.filter((task) => task._id !== id));
+      // Fetch tasks again after deleting a task
+      await fetchTasks(); 
     } catch (error) {
       console.error("Failed to delete task", error);
       setError("Failed to delete task. Please try again.");
@@ -172,13 +165,13 @@ const TaskDashboard = ({ token, setToken }) => {
               <h3>{task.title}</h3>
               <p>{task.description}</p>
               <p>Status: {task.status}</p>
-              <p>Due Date: {new Date(task.duedate).toLocaleDateString()}</p> {/* Format the date */}
+              <p>Due Date: {new Date(task.duedate).toLocaleDateString()}</p>
               <button onClick={() => handleEditTask(task)}>Edit</button>
               <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
             </li>
           ))
         ) : (
-          <li>No tasks available.</li> // Fallback if tasks are not loaded or empty
+          <li>No tasks available.</li>
         )}
       </ul>
     </div>
